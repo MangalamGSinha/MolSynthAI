@@ -599,6 +599,9 @@ def call_gemini(api_keys: list[str], prompt: str) -> str:
 
 def parse_smiles_response(response_text: str) -> list[str]:
     """Parse the LLM response to extract SMILES strings."""
+    # Clean up markdown code blocks if the LLM wrapped it
+    response_text = response_text.replace("```json", "").replace("```", "").strip()
+
     # Try direct JSON parse
     try:
         result = json.loads(response_text)
