@@ -43,9 +43,8 @@ cd MolSynthAI
 ```
 
 2. Install the required dependencies (Python 3.10+ recommended):
-
 ```bash
-pip install streamlit rdkit py3Dmol stmol google-generativeai
+pip install -r requirements.txt
 ```
 
 ### Configuration

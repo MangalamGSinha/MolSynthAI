@@ -759,7 +759,7 @@ input_col, btn_col = st.columns([5, 1])
 with input_col:
     smiles_input = st.text_input(
         "Enter SMILES string",
-        placeholder="e.g. c1ccc(CC(=O)O)cc1",
+        placeholder="Enter SMILES string",
         label_visibility="collapsed",
         key="smiles_field",
     )
