@@ -1,7 +1,6 @@
-streamlit>=1.30.0
-# rdkit — install via conda: conda install -c conda-forge rdkit
+streamlit>=1.55.0
+rdkit>=2022.9.5
 stmol>=0.0.9
-py3Dmol>=2.0.0
-openai>=1.0.0
-google-generativeai>=0.3.0
-Pillow>=10.0.0
+py3Dmol>=2.5.4
+google-generativeai>=0.8.6
+Pillow>=12.1.1
