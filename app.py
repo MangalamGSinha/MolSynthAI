@@ -217,20 +217,35 @@ section[data-testid="stSidebar"] {
     border: 1px solid rgba(0, 150, 255, 0.25);
 }
 
-/* Buttons */
-.stButton > button {
-    background: linear-gradient(135deg, #6633ff, #4f46e5) !important;
+/* Buttons — primary (red) */
+.stButton > button[kind="primary"] {
+    background: rgb(255, 75, 75) !important;
     color: white !important;
     border: none !important;
     border-radius: 10px !important;
     padding: 0.6rem 1.5rem !important;
     font-weight: 600 !important;
     transition: all 0.3s ease !important;
-    box-shadow: 0 4px 15px rgba(102, 51, 255, 0.3) !important;
+    box-shadow: 0 4px 15px rgba(255, 75, 75, 0.3) !important;
 }
-.stButton > button:hover {
+.stButton > button[kind="primary"]:hover {
     transform: translateY(-1px) !important;
-    box-shadow: 0 6px 20px rgba(102, 51, 255, 0.45) !important;
+    box-shadow: 0 6px 20px rgba(255, 75, 75, 0.45) !important;
+}
+
+/* Sample buttons — subtle gray (secondary type) */
+.stButton > button[kind="secondary"] {
+    background: rgba(128, 128, 128, 0.1) !important;
+    border: 1px solid rgba(128, 128, 128, 0.3) !important;
+    box-shadow: none !important;
+    color: var(--text-secondary) !important;
+    font-weight: 400 !important;
+}
+.stButton > button[kind="secondary"]:hover {
+    background: rgba(128, 128, 128, 0.18) !important;
+    border-color: rgba(128, 128, 128, 0.45) !important;
+    box-shadow: none !important;
+    transform: none !important;
 }
 
 /* Download buttons */
@@ -748,11 +763,11 @@ if "_pending_smiles" in st.session_state:
     st.session_state["smiles_field"] = st.session_state.pop("_pending_smiles")
 
 # Sample SMILES buttons
-st.markdown('<p style="color: var(--text-muted); font-size:0.82rem; margin-bottom:0.4rem;">🧪 Try a sample:</p>', unsafe_allow_html=True)
+st.markdown('<p style="color: var(--text-muted); margin-bottom:0.4rem; font-style: italic; letter-spacing: 0.5px;">🧪 Try a sample:</p>', unsafe_allow_html=True)
 sample_cols = st.columns(len(SAMPLE_MOLECULES))
 for idx, (name, smi) in enumerate(SAMPLE_MOLECULES.items()):
     with sample_cols[idx]:
-        st.button(name, key=f"sample_{name}", width="stretch", on_click=set_sample, args=(smi,))
+        st.button(name, key=f"sample_{name}", type="secondary", width="stretch", on_click=set_sample, args=(smi,))
 
 # Input field + submit button
 input_col, btn_col = st.columns([5, 1])
@@ -764,7 +779,7 @@ with input_col:
         key="smiles_field",
     )
 with btn_col:
-    submit_clicked = st.button("🔍 Submit", width="stretch")
+    submit_clicked = st.button("🔍 Submit", type="primary", width="stretch")
 
 # Validate SMILES only on submit
 if submit_clicked and smiles_input:
@@ -823,6 +838,7 @@ col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
 with col_btn2:
     generate_clicked = st.button(
         f"🚀 Generate {num_molecules} Similar Molecules",
+        type="primary",
         width="stretch",
         disabled=(input_mol is None),
     )
