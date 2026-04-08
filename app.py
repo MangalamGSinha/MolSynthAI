@@ -97,6 +97,7 @@ html, body, [class*="st-"] {
 /* Hide default Streamlit branding */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
+header {visibility: hidden;}
 
 /* Hide sidebar completely */
 section[data-testid="stSidebar"] {
