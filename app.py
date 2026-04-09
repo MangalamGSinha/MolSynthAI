@@ -109,12 +109,6 @@ html, body, [class*="st-"] {
 footer {visibility: hidden;}
 header {visibility: hidden;}
 
-/* Fix file uploader icon: force Material Symbols font so "upload" ligature renders as ↑ icon */
-[data-testid="stFileUploader"] button span[data-testid="stIconMaterial"] {
-    font-family: 'Material Symbols Rounded' !important;
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24 !important;
-    font-size: 1.1rem !important;
-}
 
 
 /* Hide sidebar completely */
@@ -320,40 +314,22 @@ section[data-testid="stSidebar"] {
     margin-top: 4px;
 }
 
-/* Property table */
-.prop-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 3px;
-    font-size: 0.78rem;
-    margin-top: 0.5rem;
+[data-testid="stFileUploaderDropzone"] button {
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
 }
-.prop-table td {
-    padding: 4px 8px;
+
+[data-testid="stFileUploaderDropzone"] button > div {
+    display: none !important;
 }
-.prop-table td:first-child {
-    color: var(--text-primary);
-    font-weight: 500;
-    white-space: nowrap;
+
+[data-testid="stFileUploaderDropzone"] button::after {
+    content: "Upload" !important;
+    display: block !important;
 }
-.prop-table td:last-child {
-    color: var(--text-primary);
-    font-weight: 600;
-    text-align: right;
-}
-.prop-pass {
-    color: #00cc66 !important;
-}
-.prop-fail {
-    color: #ff5555 !important;
-}
-.prop-sim {
-    background: linear-gradient(90deg, #6633ff, #00ccff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 700 !important;
-    font-size: 0.9rem !important;
-}
+
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -879,6 +855,7 @@ with input_tab_sdf:
         "Upload SDF / MOL File",
         type=["sdf", "mol"],
         key="sdf_uploader",
+        label_visibility="collapsed",
     )
     if uploaded_sdf is not None:
         sdf_bytes = uploaded_sdf.getvalue()
