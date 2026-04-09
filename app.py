@@ -99,12 +99,13 @@ html, body, [class*="st-"] {
 footer {visibility: hidden;}
 header {visibility: hidden;}
 
-/* Fix file uploader: hide Material Icon ligature that renders as duplicate text */
-[data-testid="stFileUploader"] button span[data-testid="stIconMaterial"],
-[data-testid="stFileUploader"] button .e7msn5c0,
-section[role="presentation"] button span span span {
-    display: none !important;
+/* Fix file uploader icon: force Material Symbols font so "upload" ligature renders as ↑ icon */
+[data-testid="stFileUploader"] button span[data-testid="stIconMaterial"] {
+    font-family: 'Material Symbols Rounded' !important;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24 !important;
+    font-size: 1.1rem !important;
 }
+
 
 /* Hide sidebar completely */
 section[data-testid="stSidebar"] {
@@ -309,7 +310,7 @@ section[data-testid="stSidebar"] {
     padding: 4px 8px;
 }
 .prop-table td:first-child {
-    color: var(--text-muted);
+    color: var(--text-primary);
     font-weight: 500;
     white-space: nowrap;
 }
@@ -468,25 +469,35 @@ def show_3d_viewer(mol_block: str, width: int = 340, height: int = 300):
     """Render a py3Dmol viewer with browser theme-aware background."""
     # Escape backticks and backslashes in mol_block for JS template literal
     escaped_block = mol_block.replace("\\", "\\\\").replace("`", "\\`")
-    html_content = f"""
-    <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
-    <div id="mol-viewer" style="width:{width}px;height:{height}px;position:relative;"></div>
-    <script>
-    (function() {{
-        var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var bgColor = isDark ? '#1a1a3e' : '#ffffff';
-        var viewer = $3Dmol.createViewer('mol-viewer', {{backgroundColor: bgColor}});
-        viewer.addModel(`{escaped_block}`, 'mol');
-        viewer.setStyle({{"stick": {{"radius": 0.12}}, "sphere": {{"scale": 0.25}}}});
-        viewer.zoomTo();
-        viewer.render();
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {{
-            viewer.setBackgroundColor(e.matches ? '#1a1a3e' : '#ffffff');
-            viewer.render();
-        }});
-    }})();
-    </script>
-    """
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+<style>
+  html, body {{
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    width: {width}px;
+    height: {height}px;
+    background: transparent;
+  }}
+</style>
+<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+</head>
+<body>
+<div id="mol-viewer" style="width:{width}px;height:{height}px;position:relative;"></div>
+<script>
+(function() {{
+    var viewer = $3Dmol.createViewer('mol-viewer');
+    viewer.setBackgroundColor(0x000000, 0.0);
+    viewer.addModel(`{escaped_block}`, 'mol');
+    viewer.setStyle({{"stick": {{"radius": 0.12}}, "sphere": {{"scale": 0.25}}}});
+    viewer.zoomTo();
+    viewer.render();
+}})();
+</script>
+</body>
+</html>"""
     st.iframe(html_content, height=height)
 
 
@@ -564,11 +575,11 @@ def props_to_html(props: dict) -> str:
         <tr><td class="prop-label">📐 Formula</td><td class="prop-val">{props['Formula']}</td></tr>
         <tr><td class="prop-label">⚖️ MW</td><td class="prop-val {_cls(props['MW'], 500)}">{props['MW']}</td></tr>
         <tr><td class="prop-label">💧 LogP</td><td class="prop-val {_cls(props['LogP'], 5)}">{props['LogP']}</td></tr>
-        <tr><td class="prop-label">🧲 TPSA</td><td class="prop-val">{props['TPSA']} Å²</td></tr>
         <tr><td class="prop-label">🤝 HBD / HBA</td><td class="prop-val"><span class="{_cls(props['HBD'], 5)}">{props['HBD']}</span> / <span class="{_cls(props['HBA'], 10)}">{props['HBA']}</span></td></tr>
+        <tr><td class="prop-label">💊 Lipinski</td><td class="prop-val {lipinski_cls}">{lipinski_text}</td></tr>
+        <tr><td class="prop-label">🧲 TPSA</td><td class="prop-val">{props['TPSA']} Å²</td></tr>
         <tr><td class="prop-label">🔄 Rot. Bonds</td><td class="prop-val">{props['RotBonds']}</td></tr>
         <tr><td class="prop-label">💎 QED</td><td class="prop-val {_cls(props['QED'], 0.5, 'ge')}">{props['QED']}</td></tr>
-        <tr><td class="prop-label">💊 Lipinski</td><td class="prop-val {lipinski_cls}">{lipinski_text}</td></tr>
     </table>
     </body></html>
     """
@@ -842,18 +853,10 @@ with input_tab_smiles:
             st.markdown('<span class="status-badge badge-error">✗ Invalid SMILES</span>', unsafe_allow_html=True)
 
 with input_tab_sdf:
-    st.markdown(
-        '<p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.8rem;">'
-        'Upload an <strong>SDF</strong> or <strong>MOL</strong> file. '
-        'The first structure will be converted to SMILES and used as input.</p>',
-        unsafe_allow_html=True,
-    )
     uploaded_sdf = st.file_uploader(
-        " ",
+        "Upload SDF / MOL File",
         type=["sdf", "mol"],
-        label_visibility="collapsed",
         key="sdf_uploader",
-        help="Drag and drop an .sdf or .mol file here",
     )
     if uploaded_sdf is not None:
         sdf_bytes = uploaded_sdf.getvalue()
@@ -1091,7 +1094,7 @@ if st.session_state.get("generation_done") and st.session_state.get("generated_m
     )
 
     # ── Molecule Grid ──
-    cols_per_row = 3
+    cols_per_row = 4
     for i in range(0, len(valid_mols), cols_per_row):
         cols = st.columns(cols_per_row)
         for j, col in enumerate(cols):
@@ -1109,12 +1112,12 @@ if st.session_state.get("generation_done") and st.session_state.get("generated_m
                 )
 
                 if "2D" in view_mode:
-                    svg_text = mol_to_svg(mol, size=(350, 280))
+                    svg_text = mol_to_svg(mol, size=(250, 210))
                     st.image(svg_text, width="stretch")
                 else:
                     mol_block = mol_to_3d(mol)
                     if mol_block:
-                        show_3d_viewer(mol_block, width=340, height=280)
+                        show_3d_viewer(mol_block, width=230, height=230)
                     else:
                         st.warning("3D generation failed")
 
