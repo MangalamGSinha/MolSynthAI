@@ -36,17 +36,22 @@ st.markdown("""
 
 /* ── CSS Variables: Dark Mode (default) ── */
 :root {
-    --bg-primary: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 40%, #24243e 100%);
+    --bg-primary: #0e1117;
+    --bg-secondary: #0f172a;
+    --bg-tertiary: #1e293b;
     --bg-sidebar: linear-gradient(180deg, #13112b 0%, #1a1840 100%);
-    --bg-card: rgba(255,255,255,0.04);
+    --bg-card: rgba(30, 37, 52, 0.7);
     --bg-header: linear-gradient(135deg, rgba(102, 51, 255, 0.15), rgba(0, 204, 255, 0.10));
     --border-card: rgba(255,255,255,0.08);
+    --border-subtle: rgba(148, 163, 184, 0.12);
     --border-header: rgba(102, 51, 255, 0.25);
     --border-sidebar: rgba(102, 51, 255, 0.2);
-    --text-primary: #e0e0ff;
+    --text-primary: #e2e8f0;
     --text-secondary: rgba(255,255,255,0.65);
-    --text-muted: rgba(255,255,255,0.45);
+    --text-muted: #94a3b8;
     --text-label: rgba(255,255,255,0.5);
+    --accent-teal: #00d4aa;
+    --accent-violet: #7c5cfc;
     --sidebar-heading: #c4b5fd;
     --section-border: rgba(102, 51, 255, 0.3);
     --smiles-bg: rgba(0,204,255,0.08);
@@ -55,12 +60,17 @@ st.markdown("""
     --metric-bg: rgba(255,255,255,0.04);
     --metric-border: rgba(255,255,255,0.08);
     --viewer-bg: #1a1a3e;
+    --radius: 14px;
+    --transition: 0.25s cubic-bezier(.4, 0, .2, 1);
 }
 
 /* ── CSS Variables: Light Mode ── */
 @media (prefers-color-scheme: light) {
     :root {
         --bg-primary: #ffffff;
+        --bg-secondary: #f8fafc;
+        --bg-tertiary: #f1f5f9;
+        --border-subtle: rgba(0, 0, 0, 0.08);
         --bg-sidebar: linear-gradient(180deg, #f8f7ff 0%, #eeedf8 100%);
         --bg-card: rgba(0,0,0,0.03);
         --bg-header: linear-gradient(135deg, rgba(102, 51, 255, 0.08), rgba(0, 204, 255, 0.06));
@@ -120,33 +130,45 @@ section[data-testid="stSidebar"] {
 
 /* Main background */
 .stApp {
-    background: var(--bg-primary);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary);
 }
 
-/* Header */
-.main-header {
-    background: var(--bg-header);
-    border: 1px solid var(--border-header);
-    border-radius: 16px;
-    padding: 2rem 2.5rem;
-    margin-bottom: 2rem;
-    backdrop-filter: blur(12px);
-    text-align: center;
+.stApp > header {
+    background-color: var(--bg-primary) !important;
 }
-.main-header h1 {
-    background: linear-gradient(90deg, #6633ff, #00ccff, #00ffcc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+
+/* ---------- Hero Header ---------- */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.hero-header {
+    background: radial-gradient(circle at 30% 40%, rgba(0, 212, 170, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(124, 92, 252, 0.06) 0%, transparent 50%),
+                linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 50%, var(--bg-secondary) 100%);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 3rem 2.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    animation: fadeInUp 0.5s ease-out;
+}
+.hero-header h1 {
     font-size: 2.8rem;
     font-weight: 800;
-    margin: 0;
-    letter-spacing: -0.5px;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--accent-teal), var(--accent-violet));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
-.main-header p {
-    color: var(--text-secondary);
-    font-size: 1.05rem;
-    margin: 0.5rem 0 0 0;
-    font-weight: 300;
+.hero-header p {
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    margin: 0;
+}
+@media (max-width: 768px) {
+    .hero-header { padding: 2rem 1.5rem; }
+    .hero-header h1 { font-size: 2rem; }
 }
 
 /* Cards */
@@ -788,7 +810,7 @@ def generate_csv_download(mols: list[tuple[str, 'Chem.Mol']], input_mol: 'Chem.M
 # Main Content
 # ─────────────────────────────────────────────
 st.markdown("""
-<div class="main-header">
+<div class="hero-header">
     <h1>🧪 MolSynthAI</h1>
     <p>Generate structurally similar molecules for docking &amp; lead optimization — powered by AI</p>
 </div>
