@@ -487,7 +487,7 @@ def show_3d_viewer(mol_block: str, width: int = 340, height: int = 300):
     }})();
     </script>
     """
-    st.html(html_content)
+    st.iframe(html_content, height=height)
 
 
 def compute_properties(mol: Chem.Mol, input_mol: Chem.Mol = None) -> dict:
@@ -633,7 +633,7 @@ def call_gemini(api_keys: list[str], prompt: str) -> str:
         try:
             client = genai.Client(api_key=key)
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash",
                 contents=prompt,
             )
             # Success — remember this key index for next time
