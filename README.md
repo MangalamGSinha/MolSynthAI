@@ -29,7 +29,7 @@
 * **Frontend**: [Streamlit](https://streamlit.io/)
 * **Cheminformatics**: [RDKit](https://www.rdkit.org/)
 * **Molecular Visualization**: [py3Dmol](https://3dmol.csb.pitt.edu/) / `stmol`
-* **AI engine**: Google Gemini (`google-generativeai`)
+* **AI engine**: Google Gemini (`google-genai`)
 
 ## 🚀 Getting Started
 

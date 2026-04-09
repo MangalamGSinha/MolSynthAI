@@ -21,7 +21,7 @@ import requests
 # ─────────────────────────────────────────────
 st.set_page_config(
     page_title="MolSynthAI",
-    page_icon="🧬",
+    page_icon="🧪",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -98,6 +98,13 @@ html, body, [class*="st-"] {
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 header {visibility: hidden;}
+
+/* Fix file uploader: hide Material Icon ligature that renders as duplicate text */
+[data-testid="stFileUploader"] button span[data-testid="stIconMaterial"],
+[data-testid="stFileUploader"] button .e7msn5c0,
+section[role="presentation"] button span span span {
+    display: none !important;
+}
 
 /* Hide sidebar completely */
 section[data-testid="stSidebar"] {
@@ -332,20 +339,47 @@ section[data-testid="stSidebar"] {
 # Helper Functions
 # ─────────────────────────────────────────────
 def sdf_to_smiles(sdf_content: bytes) -> str | None:
-    """Convert SDF file content to SMILES using RDKit."""
-    # Ensure content is bytes
+    """Convert SDF file content to SMILES using RDKit (returns first valid molecule)."""
+    results = sdf_to_all_smiles(sdf_content, limit=1)
+    return results[0][0] if results else None
+
+
+def sdf_to_all_smiles(sdf_content: bytes, limit: int = 0) -> list[tuple[str, Chem.Mol]]:
+    """Extract all (SMILES, Mol) pairs from SDF content.
+    
+    Args:
+        sdf_content: Raw bytes of an SDF/MOL file.
+        limit: Max molecules to return (0 = unlimited).
+    
+    Returns:
+        List of (canonical_smiles, rdkit_mol) tuples.
+    """
     if isinstance(sdf_content, str):
         sdf_content = sdf_content.encode("utf-8")
+
+    results: list[tuple[str, Chem.Mol]] = []
+
+    def _collect(mol):
+        if mol is not None:
+            smi = Chem.MolToSmiles(mol)
+            if smi:
+                results.append((smi, mol))
+                if limit and len(results) >= limit:
+                    return True  # signal stop
+        return False
 
     # Method 1: In-memory parsing with ForwardSDMolSupplier
     try:
         from rdkit.Chem import ForwardSDMolSupplier
         suppl = ForwardSDMolSupplier(BytesIO(sdf_content), removeHs=True, sanitize=True)
         for mol in suppl:
-            if mol is not None:
-                return Chem.MolToSmiles(mol)
+            if _collect(mol):
+                return results
     except Exception:
         pass
+
+    if results:
+        return results
 
     # Method 2: Try without sanitization (some PubChem SDFs need this)
     try:
@@ -357,9 +391,13 @@ def sdf_to_smiles(sdf_content: bytes) -> str | None:
                     Chem.SanitizeMol(mol)
                 except Exception:
                     pass
-                return Chem.MolToSmiles(mol)
+            if _collect(mol):
+                return results
     except Exception:
         pass
+
+    if results:
+        return results
 
     # Method 3: Temp file fallback
     try:
@@ -368,25 +406,30 @@ def sdf_to_smiles(sdf_content: bytes) -> str | None:
         tmp.close()
         suppl = Chem.SDMolSupplier(tmp.name, removeHs=True)
         for mol in suppl:
-            if mol is not None:
+            if _collect(mol):
                 os.unlink(tmp.name)
-                return Chem.MolToSmiles(mol)
+                return results
         os.unlink(tmp.name)
     except Exception:
         pass
 
-    # Method 4: Try parsing as a single mol block
+    if results:
+        return results
+
+    # Method 4: Try parsing as single mol blocks separated by $$$$
     try:
         text = sdf_content.decode("utf-8", errors="ignore")
-        mol_block = text.split("$$$$")[0].strip()
-        if mol_block:
-            mol = Chem.MolFromMolBlock(mol_block, removeHs=True)
-            if mol is not None:
-                return Chem.MolToSmiles(mol)
+        blocks = text.split("$$$$")
+        for block in blocks:
+            block = block.strip()
+            if block:
+                mol = Chem.MolFromMolBlock(block, removeHs=True)
+                if _collect(mol):
+                    return results
     except Exception:
         pass
 
-    return None
+    return results
 
 
 def validate_smiles(smiles: str) -> Chem.Mol | None:
@@ -423,7 +466,6 @@ def mol_to_svg(mol: Chem.Mol, size=(350, 280)) -> str:
 
 def show_3d_viewer(mol_block: str, width: int = 340, height: int = 300):
     """Render a py3Dmol viewer with browser theme-aware background."""
-    import streamlit.components.v1 as components
     # Escape backticks and backslashes in mol_block for JS template literal
     escaped_block = mol_block.replace("\\", "\\\\").replace("`", "\\`")
     html_content = f"""
@@ -445,7 +487,7 @@ def show_3d_viewer(mol_block: str, width: int = 340, height: int = 300):
     }})();
     </script>
     """
-    components.html(html_content, height=height + 10, width=width + 10)
+    st.html(html_content)
 
 
 def compute_properties(mol: Chem.Mol, input_mol: Chem.Mol = None) -> dict:
@@ -533,9 +575,8 @@ def props_to_html(props: dict) -> str:
 
 
 def render_props(props: dict, height: int = 310):
-    """Render properties HTML using components.html for full HTML support."""
-    import streamlit.components.v1 as components
-    components.html(props_to_html(props), height=height, scrolling=False)
+    """Render properties HTML using st.html for full HTML support."""
+    st.html(props_to_html(props))
 
 
 def build_prompt(smiles: str, num_molecules: int) -> str:
@@ -579,7 +620,7 @@ def call_gemini(api_keys: list[str], prompt: str) -> str:
     or rate limiting, moves to the next key. Raises an error only if
     all keys are exhausted.
     """
-    import google.generativeai as genai
+    from google import genai
 
     # Start from the last known working key index
     start_idx = st.session_state.get("_gemini_key_idx", 0)
@@ -590,9 +631,11 @@ def call_gemini(api_keys: list[str], prompt: str) -> str:
         idx = (start_idx + attempt) % n
         key = api_keys[idx]
         try:
-            genai.configure(api_key=key)
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            response = model.generate_content(prompt)
+            client = genai.Client(api_key=key)
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=prompt,
+            )
             # Success — remember this key index for next time
             st.session_state["_gemini_key_idx"] = idx
             return response.text.strip()
@@ -735,7 +778,7 @@ def generate_csv_download(mols: list[tuple[str, 'Chem.Mol']], input_mol: 'Chem.M
 # ─────────────────────────────────────────────
 st.markdown("""
 <div class="main-header">
-    <h1>🧬 MolSynthAI</h1>
+    <h1>🧪 MolSynthAI</h1>
     <p>Generate structurally similar molecules for docking &amp; lead optimization — powered by AI</p>
 </div>
 """, unsafe_allow_html=True)
@@ -763,35 +806,83 @@ def set_sample(smi):
 if "_pending_smiles" in st.session_state:
     st.session_state["smiles_field"] = st.session_state.pop("_pending_smiles")
 
-# Sample SMILES buttons
-st.markdown('<p style="color: var(--text-muted); margin-bottom:0.4rem; font-style: italic; letter-spacing: 0.5px;">🧪 Try a sample:</p>', unsafe_allow_html=True)
-sample_cols = st.columns(len(SAMPLE_MOLECULES))
-for idx, (name, smi) in enumerate(SAMPLE_MOLECULES.items()):
-    with sample_cols[idx]:
-        st.button(name, key=f"sample_{name}", type="secondary", width="stretch", on_click=set_sample, args=(smi,))
+# ── Tabbed input: SMILES or SDF file ──
+input_tab_smiles, input_tab_sdf = st.tabs(["✏️ SMILES String", "📂 Upload SDF / MOL File"])
 
-# Input field + submit button
-input_col, btn_col = st.columns([5, 1])
-with input_col:
-    smiles_input = st.text_input(
-        "Enter SMILES string",
-        placeholder="Enter SMILES string",
-        label_visibility="collapsed",
-        key="smiles_field",
+with input_tab_smiles:
+    # Sample SMILES buttons
+    st.markdown('<p style="color: var(--text-muted); margin-bottom:0.4rem; font-style: italic; letter-spacing: 0.5px;">🧪 Try a sample:</p>', unsafe_allow_html=True)
+    sample_cols = st.columns(len(SAMPLE_MOLECULES))
+    for idx, (name, smi) in enumerate(SAMPLE_MOLECULES.items()):
+        with sample_cols[idx]:
+            st.button(name, key=f"sample_{name}", type="secondary", width="stretch", on_click=set_sample, args=(smi,))
+
+    # Input field + submit button
+    input_col, btn_col = st.columns([5, 1])
+    with input_col:
+        smiles_input = st.text_input(
+            "Enter SMILES string",
+            placeholder="Enter SMILES string (e.g. CC(=O)Oc1ccccc1C(=O)O)",
+            label_visibility="collapsed",
+            key="smiles_field",
+        )
+    with btn_col:
+        submit_clicked = st.button("🔍 Submit", type="primary", width="stretch")
+
+    # Validate SMILES only on submit
+    if submit_clicked and smiles_input:
+        mol = validate_smiles(smiles_input)
+        if mol:
+            st.session_state["submitted_smiles"] = Chem.MolToSmiles(mol)
+            st.session_state["submitted_mol"] = mol
+            st.session_state.pop("sdf_source", None)  # clear SDF source flag
+        else:
+            st.session_state.pop("submitted_smiles", None)
+            st.session_state.pop("submitted_mol", None)
+            st.markdown('<span class="status-badge badge-error">✗ Invalid SMILES</span>', unsafe_allow_html=True)
+
+with input_tab_sdf:
+    st.markdown(
+        '<p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.8rem;">'
+        'Upload an <strong>SDF</strong> or <strong>MOL</strong> file. '
+        'The first structure will be converted to SMILES and used as input.</p>',
+        unsafe_allow_html=True,
     )
-with btn_col:
-    submit_clicked = st.button("🔍 Submit", type="primary", width="stretch")
-
-# Validate SMILES only on submit
-if submit_clicked and smiles_input:
-    mol = validate_smiles(smiles_input)
-    if mol:
-        st.session_state["submitted_smiles"] = Chem.MolToSmiles(mol)
-        st.session_state["submitted_mol"] = mol
-    else:
-        st.session_state.pop("submitted_smiles", None)
-        st.session_state.pop("submitted_mol", None)
-        st.markdown('<span class="status-badge badge-error">✗ Invalid SMILES</span>', unsafe_allow_html=True)
+    uploaded_sdf = st.file_uploader(
+        " ",
+        type=["sdf", "mol"],
+        label_visibility="collapsed",
+        key="sdf_uploader",
+        help="Drag and drop an .sdf or .mol file here",
+    )
+    if uploaded_sdf is not None:
+        sdf_bytes = uploaded_sdf.getvalue()
+        first_smi = sdf_to_smiles(sdf_bytes)
+        if first_smi:
+            mol = validate_smiles(first_smi)
+            if mol:
+                st.session_state["submitted_smiles"] = first_smi
+                st.session_state["submitted_mol"] = mol
+                st.session_state["sdf_source"] = True
+                st.markdown(
+                    f'<span class="status-badge badge-success">✓ Loaded from {uploaded_sdf.name}</span>'
+                    f'&nbsp;&nbsp;<code style="color: var(--smiles-color); font-size: 0.82rem;">{first_smi}</code>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.session_state.pop("submitted_smiles", None)
+                st.session_state.pop("submitted_mol", None)
+                st.markdown(
+                    '<span class="status-badge badge-error">✗ Parsed molecule failed validation</span>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.session_state.pop("submitted_smiles", None)
+            st.session_state.pop("submitted_mol", None)
+            st.markdown(
+                '<span class="status-badge badge-error">✗ Could not parse any valid molecule from the uploaded file</span>',
+                unsafe_allow_html=True,
+            )
 
 if "submitted_smiles" in st.session_state and "submitted_mol" in st.session_state:
     input_smiles = st.session_state["submitted_smiles"]
