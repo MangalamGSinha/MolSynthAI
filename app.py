@@ -606,21 +606,6 @@ Example output format: ["CCO", "CCCO", "CC(O)C"]
 Your response must be ONLY the JSON array. Output nothing else."""
 
 
-def call_openai(api_key: str, prompt: str) -> str:
-    """Call OpenAI API and return the response text."""
-    from openai import OpenAI
-    client = OpenAI(api_key=api_key)
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a medicinal chemistry expert. Always respond with only valid JSON."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.8,
-        max_tokens=2000,
-    )
-    return response.choices[0].message.content.strip()
-
 
 def call_gemini(api_keys: list[str], prompt: str) -> str:
     """Call Gemini API with automatic key failover.
