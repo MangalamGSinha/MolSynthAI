@@ -627,7 +627,7 @@ def call_gemini(api_keys: list[str], prompt: str) -> str:
         try:
             client = genai.Client(api_key=key)
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3-flash-preview",
                 contents=prompt,
             )
             # Success — remember this key index for next time
