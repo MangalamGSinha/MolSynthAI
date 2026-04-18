@@ -1024,7 +1024,7 @@ if st.session_state.get("generation_done") and st.session_state.get("generated_m
     
     export_format = st.radio(
         "Export Format",
-        ["Combined File", "ZIP of Individual Files"],
+        ["ZIP of Individual Files", "Combined File"],
         horizontal=True,
         label_visibility="collapsed",
     )
